@@ -88,6 +88,10 @@ xcodebuild build -project LiveValueCamera.xcodeproj -scheme LiveValueCamera \
 | `APP_STORE_CONNECT_PRIVATE_KEY` | AuthKey_*.p8 の中身 |
 | `APPLE_TEAM_ID` | チーム ID（`86WNUS2875`） |
 
+App Store Connect: App ID `6837945474`／Bundle ID `com.shodai4.livevaluecamera`／内部グループ「開発テスト」（自動配布）。
+
+`main` に push した時点では Secrets が未登録のため、`testflight` ジョブは「スキップ」で終わる。4 つの Secrets をリポジトリに登録すると、次の push から TestFlight まで自動で進む。
+
 ## 注意
 
 - カメラの映像は 1920×1080（16:9）で受け取る。縦長の画面では左右が切り抜かれる。
