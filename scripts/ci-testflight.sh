@@ -43,8 +43,11 @@ printf '%s\n' "$PRIVATE_KEY" > "$KEY_PATH"
 chmod 600 "$KEY_PATH"
 
 echo "== Archive (build $BUILD_NUMBER)"
-# 埋め込みのフレームワーク（GoogleMobileAds など）も配布用に署名される必要があるため、
-# アーカイブ時点でクラウド署名（API キー）を使って署名する。
+# このチームには端末が登録されていないため、開発用プロファイルは発行されない。
+# そのためアーカイブは署名なしで作り、書き出し（export）で配布用に署名する。
+# ただし SPM のバイナリ（GoogleMobileAds など）は、署名なしのままだと
+# 書き出しでも再署名されず ITMS-90035 で弾かれる。仮署名（ad-hoc）を付けておくと
+# 書き出し時に配布証明書で署名し直される。
 ARCHIVE="$RUNNER_TEMP/${APP_NAME}.xcarchive"
 rm -rf "$ARCHIVE"
 xcodebuild archive \
@@ -59,18 +62,18 @@ xcodebuild archive \
   -authenticationKeyIssuerID "$ISSUER_ID" \
   DEVELOPMENT_TEAM="$TEAM_ID" \
   CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
-  CODE_SIGN_STYLE=Automatic \
-  CODE_SIGN_IDENTITY="Apple Distribution"
+  CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
 
-echo "== 埋め込みフレームワークの署名確認"
+echo "== 埋め込みフレームワークに仮署名"
 APP_PATH="$ARCHIVE/Products/Applications/${APP_NAME}.app"
 if [ -d "$APP_PATH/Frameworks" ]; then
-  for framework in "$APP_PATH"/Frameworks/*.framework; do
-    [ -e "$framework" ] || continue
-    if codesign --verify --strict "$framework" 2>/dev/null; then
-      echo "signed: $(basename "$framework")"
+  for item in "$APP_PATH"/Frameworks/*; do
+    [ -e "$item" ] || continue
+    /usr/bin/codesign --force --sign - --timestamp=none "$item" >/dev/null 2>&1 || true
+    if /usr/bin/codesign --verify --strict "$item" >/dev/null 2>&1; then
+      echo "ad-hoc signed: $(basename "$item")"
     else
-      echo "WARNING: 署名が見つかりません: $(basename "$framework")"
+      echo "WARNING: 仮署名に失敗: $(basename "$item")"
     fi
   done
 fi
@@ -108,6 +111,17 @@ unzip -p "$IPA" "Payload/*.app/Info.plist" > "$RUNNER_TEMP/ipa-info.plist" || tr
 plutil -extract CFBundleIdentifier raw -o - "$RUNNER_TEMP/ipa-info.plist" || true
 plutil -extract CFBundleShortVersionString raw -o - "$RUNNER_TEMP/ipa-info.plist" || true
 plutil -extract CFBundleVersion raw -o - "$RUNNER_TEMP/ipa-info.plist" || true
+
+echo "== 書き出した IPA の署名を確認"
+CHECK_DIR="$RUNNER_TEMP/ipa-check"
+rm -rf "$CHECK_DIR"
+mkdir -p "$CHECK_DIR"
+unzip -q "$IPA" -d "$CHECK_DIR" || true
+for item in "$CHECK_DIR/Payload/${APP_NAME}.app/Frameworks"/*; do
+  [ -e "$item" ] || continue
+  echo "--- $(basename "$item")"
+  /usr/bin/codesign -dv "$item" 2>&1 | grep -E "Authority|Signature|TeamIdentifier" || true
+done
 
 echo "== Upload to TestFlight"
 xcrun altool --upload-app -f "$IPA" -t ios \
