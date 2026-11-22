@@ -43,6 +43,8 @@ printf '%s\n' "$PRIVATE_KEY" > "$KEY_PATH"
 chmod 600 "$KEY_PATH"
 
 echo "== Archive (build $BUILD_NUMBER)"
+# 埋め込みのフレームワーク（GoogleMobileAds など）も配布用に署名される必要があるため、
+# アーカイブ時点でクラウド署名（API キー）を使って署名する。
 ARCHIVE="$RUNNER_TEMP/${APP_NAME}.xcarchive"
 rm -rf "$ARCHIVE"
 xcodebuild archive \
@@ -57,7 +59,20 @@ xcodebuild archive \
   -authenticationKeyIssuerID "$ISSUER_ID" \
   DEVELOPMENT_TEAM="$TEAM_ID" \
   CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
-  CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
+  CODE_SIGN_STYLE=Automatic
+
+echo "== 埋め込みフレームワークの署名確認"
+APP_PATH="$ARCHIVE/Products/Applications/${APP_NAME}.app"
+if [ -d "$APP_PATH/Frameworks" ]; then
+  for framework in "$APP_PATH"/Frameworks/*.framework; do
+    [ -e "$framework" ] || continue
+    if codesign --verify --strict "$framework" 2>/dev/null; then
+      echo "signed: $(basename "$framework")"
+    else
+      echo "WARNING: 署名が見つかりません: $(basename "$framework")"
+    fi
+  done
+fi
 
 echo "== ExportOptions"
 EXPORT_OPTIONS="$RUNNER_TEMP/ExportOptions.plist"
