@@ -20,6 +20,7 @@
 | `Sources/AdBannerView.swift` | AdMob バナー（SDK が無い環境では何も出さない） |
 | `Sources/ProStore.swift` | 買い切りの広告非表示（StoreKit 2 の土台） |
 | `Resources/Info.plist` | カメラ・写真の利用目的、暗号化の申告、広告のアプリ ID、SKAdNetwork |
+| `Resources/PrivacyInfo.xcprivacy` | プライバシー申告（追跡なし・UserDefaults の利用理由） |
 | `Resources/Assets.xcassets` | アプリアイコン（1024px） |
 | `scripts/verify-logic.py` | 明度・表示・座標変換の自己点検（CI でも実行） |
 | `scripts/ci-testflight.sh` | アーカイブ・書き出し・TestFlight アップロード |
@@ -97,3 +98,4 @@ App Store Connect: App ID `6837945474`／Bundle ID `com.shodai4.livevaluecamera`
 - カメラの映像は 1920×1080（16:9）で受け取る。縦長の画面では左右が切り抜かれる。
 - 明度の数値は sRGB の画素値に Rec.709 の係数を掛けた目安で、測色器の値ではない。色管理は行わず、フィルタと数値表示を同じ土台に揃えている。
 - 画面は縦向きのみ。
+- プライバシー: 映像と明度の計算はすべて端末内で行う。外部へ送るのは広告の読み込みだけで、アプリ側では何も収集しない（`Resources/PrivacyInfo.xcprivacy` に追跡なし・UserDefaults の利用理由を記載）。
