@@ -59,7 +59,8 @@ xcodebuild archive \
   -authenticationKeyIssuerID "$ISSUER_ID" \
   DEVELOPMENT_TEAM="$TEAM_ID" \
   CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
-  CODE_SIGN_STYLE=Automatic
+  CODE_SIGN_STYLE=Automatic \
+  CODE_SIGN_IDENTITY="Apple Distribution"
 
 echo "== 埋め込みフレームワークの署名確認"
 APP_PATH="$ARCHIVE/Products/Applications/${APP_NAME}.app"
