@@ -1,0 +1,73 @@
+name: LiveValueCamera
+
+options:
+  bundleIdPrefix: com.shodai4
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+packages:
+  GoogleMobileAds:
+    url: https://github.com/googleads/swift-package-manager-google-mobile-ads.git
+    from: 13.0.0
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+    DEVELOPMENT_TEAM: 86WNUS2875
+
+targets:
+  LiveValueCamera:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Sources
+      - path: Resources/Assets.xcassets
+    dependencies:
+      - package: GoogleMobileAds
+        product: GoogleMobileAds
+    settings:
+      base:
+        PRODUCT_NAME: LiveValueCamera
+        PRODUCT_BUNDLE_IDENTIFIER: com.shodai4.livevaluecamera
+        INFOPLIST_FILE: Resources/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_PREVIEWS: YES
+        SWIFT_EMIT_LOC_STRINGS: YES
+        OTHER_LDFLAGS:
+          - "$(inherited)"
+          - "-ObjC"
+
+  LiveValueCameraTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Tests
+      - path: Sources/ValueModel.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.shodai4.livevaluecamera.tests
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  LiveValueCamera:
+    build:
+      targets:
+        LiveValueCamera: all
+        LiveValueCameraTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - LiveValueCameraTests
