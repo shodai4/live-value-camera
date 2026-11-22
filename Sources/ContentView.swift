@@ -1,5 +1,6 @@
 import CoreImage
 import Photos
+import QuartzCore
 import SwiftUI
 import UIKit
 
@@ -31,7 +32,7 @@ struct ContentView: View {
     @State private var readingA: Double?
     @State private var readingB: Double?
     @State private var previewSize: CGSize = .zero
-    @State private var readingTask: Task<Void, Never>?
+    @State private var lastReadTime: CFTimeInterval = 0
     @State private var toast: String?
     @State private var toastToken = 0
     @State private var isSaving = false
@@ -198,7 +199,6 @@ struct ContentView: View {
         }
         .frame(width: 84, height: 84)
         .contentShape(Rectangle())
-        .position(point)
         .gesture(
             DragGesture(minimumDistance: 0, coordinateSpace: .named("preview"))
                 .onChanged { drag in
@@ -208,8 +208,10 @@ struct ContentView: View {
                     } else {
                         pointB = clamped
                     }
+                    scheduleReadings()
                 }
         )
+        .position(point)
     }
 
     private func differenceLabel(between a: CGPoint, and b: CGPoint) -> some View {
@@ -247,32 +249,30 @@ struct ContentView: View {
         }
     }
 
-    private func scheduleReadings() {
-        readingTask?.cancel()
-        guard comparisonOn, let frame = camera.frame, previewSize.width > 0, previewSize.height > 0 else {
+    private func scheduleReadings(force: Bool = false) {
+        guard comparisonOn, let frame = camera.frame,
+              previewSize.width > 0, previewSize.height > 0 else {
             readingA = nil
             readingB = nil
             return
         }
-        let geometry = PreviewGeometry(imageSize: frame.extent.size, viewSize: previewSize)
-        let a = pointA
-        let b = pointB
-        let isMirrored = mirrored
-        let source = frame
-        let pipeline = self.pipeline
+        // 映像が届くたびに呼ばれるので、読み取りは短い間隔で間引く。
+        let now = CACurrentMediaTime()
+        guard force || now - lastReadTime >= 0.06 else { return }
+        lastReadTime = now
 
-        readingTask = Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 70_000_000)
-            if Task.isCancelled { return }
-            let valueA = a.map {
-                pipeline.luminance(at: geometry.imagePoint(forViewPoint: $0, mirrored: isMirrored), in: source)
-            }
-            let valueB = b.map {
-                pipeline.luminance(at: geometry.imagePoint(forViewPoint: $0, mirrored: isMirrored), in: source)
-            }
-            if Task.isCancelled { return }
-            self.readingA = valueA ?? nil
-            self.readingB = valueB ?? nil
+        let geometry = PreviewGeometry(imageSize: frame.extent.size, viewSize: previewSize)
+        if let a = pointA {
+            readingA = pipeline.luminance(at: geometry.imagePoint(forViewPoint: a, mirrored: mirrored),
+                                          in: frame)
+        } else {
+            readingA = nil
+        }
+        if let b = pointB {
+            readingB = pipeline.luminance(at: geometry.imagePoint(forViewPoint: b, mirrored: mirrored),
+                                          in: frame)
+        } else {
+            readingB = nil
         }
     }
 
